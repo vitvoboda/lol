@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title> 
+</head>
+<body 
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Hotel Aurora – Opuštěný hotel</title>
+
+<style>
+@keyframes flicker {
+    0% { opacity: 0.9; }
+    5% { opacity: 0.4; }
+    10% { opacity: 1; }
+    15% { opacity: 0.6; }
+    20% { opacity: 1; }
+    100% { opacity: 0.9; }
+}
+
+@keyframes fog {
+    from { background-position: 0 0; }
+    to { background-position: 1000px 0; }
+}
+
+body {
+    margin: 0;
+    font-family: "Times New Roman", serif;
+    background:
+        linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.95)),
+        url("https://images.unsplash.com/photo-1505691938895-1758d7feb511");
+    background-size: cover;
+    background-attachment: fixed;
+    color: #d8d8d8;
+    overflow-x: hidden;
+}
+
+/* Mlha */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: url("https://www.transparenttextures.com/patterns/fog.png");
+    opacity: 0.15;
+    animation: fog 120s linear infinite;
+    pointer-events: none;
+}
+
+header {
+    text-align: center;
+    padding: 90px 20px;
+    animation: flicker 6s infinite;
+}
+
+header h1 {
+    font-size: 3.5em;
+    letter-spacing: 6px;
+    color: #b30000;
+    text-shadow: 0 0 15px rgba(179,0,0,0.6);
+}
+
+header p {
+    color: #888;
+    font-style: italic;
+}
+
+.container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 30px;
+    background: rgba(10,10,10,0.85);
+    box-shadow: 0 0 40px rgba(0,0,0,0.9);
+    border: 1px solid #333;
+}
+
+h2 {
+    color: #b30000;
+    letter-spacing: 2px;
+    border-bottom: 1px solid #400;
+    padding-bottom: 5px;
+}
+
+p {
+    line-height: 1.8;
+    color: #cfcfcf;
+}
+
+.contact {
+    margin-top: 40px;
+    padding: 25px;
+    background: rgba(0,0,0,0.8);
+    border-left: 5px solid #b30000;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
+}
+
+.contact p {
+    margin: 8px 0;
+}
+
+.contact strong {
+    color: #fff;
+}
+
+.warning {
+    margin-top: 30px;
+    padding: 15px;
+    background: rgba(80,0,0,0.6);
+    border: 1px solid #600;
+    color: #f2bcbc;
+    font-style: italic;
+    text-align: center;
+}
+
+footer {
+    text-align: center;
+    padding: 25px;
+    font-size: 0.85em;
+    color: #666;
+    border-top: 1px solid #222;
+}
+
+/* Krevní efekt na text */
+.blood {
+    text-shadow:
+        0 0 5px #600,
+        0 0 15px #900,
+        0 0 30px #b30000;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1 class="blood">HOTEL AURORA</h1>
+    <p>Ne každý, kdo vešel, znovu odešel</p>
+</header>
+
+<div class="container">
+    <h2>Zapomené místo</h2>
+    <p>
+        Hotel Aurora stojí opuštěný již mnoho let. Dveře se samy otevírají,
+        podlahy vržou i bez kroků a v noci je slyšet tlumený šepot z pokojů,
+        které už dávno nemají hosty.
+    </p>
+
+    <p>
+        Oficiálně je objekt uzavřen. Neoficiálně… se do něj občas někdo odváží vstoupit.
+    </p>
+
+    <div class="warning">
+        VSTUP NA VLASTNÍ NEBEZPEČÍ. HOTEL NEODPOVÍDÁ ZA ZTRÁTY ANI ZMIZENÍ.
+    </div>
+
+    <h2>Kontakt</h2>
+    <div class="contact">
+        <p><strong>Manažer:</strong> Vít Svoboda</p>
+        <p><strong>E-mail:</strong> vit.svoboda@hotel-aurora.cz</p>
+        <p><strong>Telefon:</strong> +420 777 000 000</p>
+        <p>
+            Pokud se rozhodnete kontaktovat správu objektu,
+            ujistěte se, že opravdu chcete znát odpovědi.
+        </p>
+    </div>
+</div>
+
+<footer>
+    © 2026 Hotel Aurora — místo, na které se nezapomíná
+</footer>
+
+</body>
+</html>
+
+</body>
+</html>               

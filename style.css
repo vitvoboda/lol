@@ -1,0 +1,79 @@
+html, body {
+    height: 100%;
+    margin: 0;
+}
+body {
+    background-color: rgb(16, 156, 221);
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+.mm
+{ 
+    color: rgb(218, 34, 34);
+    background-color: rgb(3, 0, 0) ;text-align: center;
+}
+.vv{
+    color: rgb(36, 204, 168);background-color: rgb(131, 49, 224) ;text-acenterlign:  center;
+}
+.fnaf{color: #ffffff
+
+}
+.n{ background-color: rgb(3, 0, 0) ;                                   
+}
+.container {
+    display: flex;
+    justify-content: center;
+}
+.button{color: rgb(0, 0, 0);
+    background-color: rgb(38, 179, 34);
+    border: 20px black;
+    padding: 10px 20px;
+}
+.abc{color: rgb(0, 0, 0);
+    background-color: rgb(38, 179, 34);
+    border: 20px black;
+    padding: 10px 20px;
+
+
+}
+.seznam{  display: flex;justify-content: space-between; align-self: center;padding: 10px 20px;  
+      background-color: rgb(26, 21, 21);
+
+color: rgb(255, 255, 255);
+}
+.nav-links{list-style: none;display: flex;color: #ffffff;gap: 15px;color: #55769b;
+
+
+}
+.navbar{ display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background-color: rgb(31, 23, 23);
+
+}
+.logo{color: white;font: size 23px; ;font-weight: bold;
+
+}
+.nav-links a:hover{background-color: rgb(89, 89, 151);
+
+}
+.nav-links a { text-decoration: none; padding: 10px 20px;border-radius: 6px;background: #333;color: #ffffff;transition: 0.25s ease;
+
+}
+.nav-links a.active {  background: #096cdd ; color: #ffffff;background: #bd3b3b;
+
+}
+.nav-links a.active:hover{background: #6690c0;
+
+}
+.footer{background-color: #dd0909;color: white;padding: 10px 20px;display: flex;justify-content: space-between;align-items: center;font-size: 15px;
+
+}
+.footer a{color: #ffffff;text-decoration: none;margin-left: 15px;
+
+}
+
+main {
+    flex: 1;
+}
+.snow{
+   
+}
