@@ -13,6 +13,185 @@
 <li><a href="index.html">domů</a><li>
 </ul>
 
-    <h1>nic tuneni v tomto pokračování ale tato stránka vám umožní hrát znovu</h1>
+    <h1>nic tuneni v tomto pokračování ale tato stránka vám umožní hrát znovu</h1><!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8" />
+<title>Auto s Checkpointy</title>
+<style>
+  body {
+    margin: 0;
+    background: black;
+  }
+  canvas {
+    display: block;
+    margin: auto;
+    background: #333;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="game" width="800" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+// Proměnné hry
+let carX, carY, speed;
+let curve, targetCurve, scroll;
+let gameOver;
+let distance;
+
+const roadWidth = 300;
+const SPEED_MULTIPLIER = 20;  // přepočet rychlosti na km/h
+const keys = {};
+
+// Checkpointy v metrech
+const checkpoints = [12000, 20000, 30000, 40000];
+let currentCheckpoint = 0;
+let checkpointPassed = false;
+
+// Reset hry
+function resetGame() {
+  carX = canvas.width / 2;
+  carY = canvas.height - 80;
+  speed = 0;
+  curve = 0;
+  targetCurve = 0;
+  scroll = 0;
+  distance = 0;
+  gameOver = false;
+  currentCheckpoint = 0;
+  checkpointPassed = false;
+}
+
+// Ovládání
+document.addEventListener("keydown", e => {
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if (k === "r" && gameOver) resetGame();
+});
+document.addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+// Aktualizace hry
+function update() {
+  if (gameOver) return;
+
+  if (keys["w"] || keys["arrowup"]) speed += 0.12;
+  if (keys["s"] || keys["arrowdown"]) speed -= 0.15;
+  if (keys["a"] || keys["arrowleft"]) carX -= 4;
+  if (keys["d"] || keys["arrowright"]) carX += 4;
+
+  speed = Math.max(0, Math.min(8, speed));
+  scroll += speed * 4;
+  distance += speed;
+
+  // Náhodná zatáčka
+  if (Math.random() < 0.01) {
+    targetCurve = (Math.random() - 0.5) * 2;
+  }
+  curve += (targetCurve - curve) * 0.01;
+
+  // Výpočet středu silnice
+  const roadCenter = canvas.width / 2 + curve * 160;
+
+  // Detekce vyjetí z cesty → game over
+  if (carX < roadCenter - roadWidth / 2 || carX > roadCenter + roadWidth / 2) {
+    gameOver = true;
+  }
+
+  // Checkpoint logika
+  if (currentCheckpoint < checkpoints.length && distance >= checkpoints[currentCheckpoint]) {
+    checkpointPassed = true;
+    currentCheckpoint++;
+  }
+}
+
+// Kreslení silnice
+function drawRoad() {
+  ctx.fillStyle = "#222";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let y = 0; y < canvas.height; y += 40) {
+    const p = y / canvas.height;
+    const c = curve * 200 * p;
+    const center = canvas.width / 2 + c;
+    const w = roadWidth * (0.5 + p);
+
+    ctx.fillStyle = "#555";
+    ctx.fillRect(center - w / 2, y, w, 40);
+  }
+}
+
+// Kreslení checkpoint pruhu
+function drawCheckpoint() {
+  if (checkpointPassed) return;           // už projetý
+  if (currentCheckpoint >= checkpoints.length) return; // žádný další
+
+  const p = 0.9;
+  const c = curve * 200 * p;
+  const center = canvas.width / 2 + c;
+  const w = roadWidth * (0.5 + p);
+
+  ctx.fillStyle = "#00ffcc";
+  ctx.fillRect(center - w / 2, 320, w, 40);
+
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(center - w / 2, 320, w, 40);
+}
+
+// Kreslení auta
+function drawCar() {
+  ctx.fillStyle = "red";
+  ctx.fillRect(carX - 15, carY - 30, 30, 60);
+}
+
+// HUD: rychlost, vzdálenost, další checkpoint
+function drawHUD() {
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText(`Vzdálenost: ${Math.floor(distance)} m`, 20, 30);
+  ctx.fillText(`Rychlost: ${Math.floor(speed * SPEED_MULTIPLIER)} km/h`, 20, 55);
+  if (currentCheckpoint < checkpoints.length) {
+    ctx.fillText(`Další checkpoint: ${checkpoints[currentCheckpoint]} m`, 20, 80);
+  }
+}
+
+// Kreslení Game Over obrazovky
+function drawGameOver() {
+  ctx.fillStyle = "rgba(0,0,0,0.7)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "white";
+  ctx.font = "40px Arial";
+  ctx.fillText("GAME OVER", 260, 250);
+  ctx.font = "20px Arial";
+  ctx.fillText("Stiskni R pro restart", 285, 290);
+}
+
+// Hlavní smyčka hry
+function loop() {
+  update();
+  drawRoad();
+  drawCheckpoint();
+  drawCar();
+  drawHUD();
+  if (gameOver) drawGameOver();
+  requestAnimationFrame(loop);
+}
+
+// Start hry
+resetGame();
+loop();
+
+</script>
+
+</body>
+</html>
+
 </body>
 </html>

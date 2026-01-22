@@ -9,218 +9,287 @@
   <!DOCTYPE html>
 <html lang="cs">
 <head>
-<meta charset="UTF-8">
-<title>Auto – Pohyb silnice + restart</title>
-
-<style>
+<!DOCTYPE html>
+<html lang="cs">
+<head>
 <!DOCTYPE html>
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<title>Auto – checkpointy</title>
+<title>Racing Game – Fullscreen Mobile</title>
+
 <style>
-body {
+  body {
     margin: 0;
     background: black;
-}
-canvas {
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+  }
+
+  canvas {
     display: block;
-    margin: auto;
-    background: #333;
-}
+    background: #111;
+  }
+
+  #fullscreenBtn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    padding: 10px 14px;
+    font-size: 14px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: 1px solid white;
+    border-radius: 8px;
+  }
+
+  #mobileControls {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    z-index: 10;
+  }
+
+  #mobileControls button {
+    width: 70px;
+    height: 70px;
+    font-size: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.25);
+    color: white;
+  }
 </style>
 </head>
+
 <body>
 
-<canvas id="game" width="800" height="500"></canvas>
+<button id="fullscreenBtn">⛶ FULLSCREEN</button>
+
+<canvas id="game"></canvas>
+
+<div id="mobileControls">
+  <button id="left">◀</button>
+  <button id="up">▲</button>
+  <button id="down">▼</button>
+  <button id="right">▶</button>
+</div>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+// ================= RESIZE / FULLSCREEN =================
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+const fullscreenBtn = document.getElementById("fullscreenBtn");
+fullscreenBtn.addEventListener("click", () => {
+  const el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+});
+
+document.addEventListener("fullscreenchange", () => {
+  fullscreenBtn.style.display =
+    document.fullscreenElement ? "none" : "block";
+});
+
+// ================= PROMĚNNÉ =================
 let carX, carY, speed;
-let curve, targetCurve, scroll;
-let gameOver;
-let distance;
+let curve, targetCurve;
+let gameOver, distance;
 
 const roadWidth = 300;
 const SPEED_MULTIPLIER = 20;
+const MAX_SPEED = 8;
+const MAX_REVERSE = -4;
 const keys = {};
 
-// 👇 CHECKPOINTY (v metrech)
-const checkpoints = [12000, 20000, 30000, 40000];
+// ================= CHECKPOINTY =================
+const TOTAL_CHECKPOINTS = 50;
+const CHECKPOINT_DISTANCE = 800;
+const checkpoints = [];
+
+for (let i = 1; i <= TOTAL_CHECKPOINTS; i++) {
+  checkpoints.push(i * CHECKPOINT_DISTANCE);
+}
+
 let currentCheckpoint = 0;
-let checkpointVisible = false;
 
-// ===== RESET =====
+// ================= RESET =================
 function resetGame() {
-    carX = canvas.width / 2;
-    carY = canvas.height - 80;
-    speed = 0;
-    curve = 0;
-    targetCurve = 0;
-    scroll = 0;
-    distance = 0;
-    gameOver = false;
-    currentCheckpoint = 0;
-    checkpointVisible = false;
+  carX = canvas.width / 2;
+  carY = canvas.height - 100;
+  speed = 0;
+  curve = 0;
+  targetCurve = 0;
+  distance = 0;
+  gameOver = false;
+  currentCheckpoint = 0;
 }
 
-// ===== OVLÁDÁNÍ =====
+// ================= KLÁVESNICE =================
 document.addEventListener("keydown", e => {
-    const k = e.key.toLowerCase();
-    keys[k] = true;
-    if (k === "r" && gameOver) resetGame();
+  keys[e.key.toLowerCase()] = true;
+  if (e.key.toLowerCase() === "r" && gameOver) resetGame();
 });
-document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-// ===== LOGIKA =====
+document.addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+// ================= MOBIL =================
+function bindButton(id, key) {
+  const btn = document.getElementById(id);
+
+  btn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    keys[key] = true;
+  });
+
+  btn.addEventListener("touchend", e => {
+    e.preventDefault();
+    keys[key] = false;
+  });
+}
+
+bindButton("up", "w");
+bindButton("down", "s");
+bindButton("left", "a");
+bindButton("right", "d");
+
+// ================= UPDATE =================
 function update() {
-    if (gameOver) return;
+  if (gameOver) return;
 
-    if (keys["w"]) speed += 0.12;
-    if (keys["s"]) speed -= 0.15;
-    if (keys["a"]) carX -= 4;
-    if (keys["d"]) carX += 4;
+  if (keys["w"]) speed += 0.12;
+  if (keys["s"]) speed -= 0.15;
 
-    speed = Math.max(0, Math.min(8, speed));
-    scroll += speed * 4;
-    distance += speed;
+  if (keys["a"]) carX -= 4;
+  if (keys["d"]) carX += 4;
 
-    // náhodné zatáčky
-    if (Math.random() < 0.01) {
-        targetCurve = (Math.random() - 0.5) * 2;
-    }
-    curve += (targetCurve - curve) * 0.01;
+  speed = Math.max(MAX_REVERSE, Math.min(MAX_SPEED, speed));
+  speed *= 0.99;
 
-    // silnice
-    const roadCenter = canvas.width / 2 + curve * 160;
+  distance += Math.max(0, speed);
 
-    if (
-        carX < roadCenter - roadWidth / 2 ||
-        carX > roadCenter + roadWidth / 2
-    ) {
-        gameOver = true;
-    }
+  if (Math.random() < 0.01) {
+    targetCurve = (Math.random() - 0.5) * 2;
+  }
+  curve += (targetCurve - curve) * 0.01;
 
-    // CHECKPOINT LOGIKA
-    if (
-        currentCheckpoint < checkpoints.length &&
-        distance >= checkpoints[currentCheckpoint] - 100
-    ) {
-        checkpointVisible = true;
-    }
+  const roadCenter = canvas.width / 2 + curve * 160;
 
-    if (
-        checkpointVisible &&
-        distance >= checkpoints[currentCheckpoint] + 100
-    ) {
-        checkpointVisible = false;
-        currentCheckpoint++;
-    }
+  if (
+    carX < roadCenter - roadWidth / 2 ||
+    carX > roadCenter + roadWidth / 2
+  ) {
+    gameOver = true;
+  }
+
+  if (
+    currentCheckpoint < checkpoints.length &&
+    distance >= checkpoints[currentCheckpoint]
+  ) {
+    currentCheckpoint++;
+  }
 }
 
-// ===== KRESLENÍ =====
+// ================= KRESLENÍ =================
 function drawRoad() {
-    ctx.fillStyle = "#222";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#322";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (let y = 0; y < canvas.height; y += 40) {
-        const p = y / canvas.height;
-        const c = curve * 200 * p;
-        const center = canvas.width / 2 + c;
-        const w = roadWidth * (0.5 + p);
-
-        ctx.fillStyle = "#555";
-        ctx.fillRect(center - w / 2, y, w, 40);
-    }
-}
-
-// 👇 CHECKPOINT PRUH
-function drawCheckpoint() {
-    if (!checkpointVisible) return;
-
-    const p = 0.8;
+  for (let y = 0; y < canvas.height; y += 40) {
+    const p = y / canvas.height;
     const c = curve * 200 * p;
     const center = canvas.width / 2 + c;
     const w = roadWidth * (0.5 + p);
 
-    ctx.fillStyle = "#00ffcc";
-    ctx.fillRect(center - w / 2, 300, w, 10);
+    ctx.fillStyle = "#555";
+    ctx.fillRect(center - w / 2, y, w, 40);
+  }
+}
+
+function drawCheckpoint() {
+  if (currentCheckpoint >= checkpoints.length) return;
+
+  const dist = checkpoints[currentCheckpoint] - distance;
+  if (dist > 300 || dist < 0) return;
+
+  const p = 0.9;
+  const c = curve * 200 * p;
+  const center = canvas.width / 2 + c;
+  const w = roadWidth * (0.5 + p);
+
+  ctx.fillStyle = "#00ffcc";
+  ctx.fillRect(center - w / 2, canvas.height * 0.65, w, 40);
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(center - w / 2, canvas.height * 0.65, w, 40);
 }
 
 function drawCar() {
-    ctx.fillStyle = "red";
-    ctx.fillRect(carX - 15, carY - 30, 30, 60);
+  ctx.fillStyle = "red";
+  ctx.fillRect(carX - 15, carY - 30, 30, 60);
 }
 
-// HUD
 function drawHUD() {
-    ctx.fillStyle = "white";
-    ctx.font = "20px Arial";
+  ctx.fillStyle = "white";
+  ctx.font = "18px Arial";
+  ctx.fillText(`Vzdálenost: ${Math.floor(distance)} m`, 20, 30);
+  ctx.fillText(`Rychlost: ${Math.floor(speed * SPEED_MULTIPLIER)} km/h`, 20, 55);
+
+  if (currentCheckpoint < checkpoints.length) {
     ctx.fillText(
-        "Vzdálenost: " + Math.floor(distance) + " m",
-        20, 30
+      `Checkpoint ${currentCheckpoint + 1}/${checkpoints.length}`,
+      20, 80
     );
-    ctx.fillText(
-        "Rychlost: " + Math.floor(speed * SPEED_MULTIPLIER) + " km/h",
-        20, 55
-    );
-
-    if (currentCheckpoint < checkpoints.length) {
-        function drawCheckpoint() {
-    if (!checkpointVisible) return;
-
-    const p = 0.9;                 // blíž k autu
-    const c = curve * 200 * p;
-    const center = canvas.width / 2 + c;
-    const w = roadWidth * (0.5 + p);
-
-    ctx.fillStyle = "#00ffcc";
-    ctx.fillRect(
-        center - w / 2,
-        320,                        // níž na obrazovce
-        w,
-        30                          // 👈 VĚTŠÍ VÝŠKA PRUHU
-    );
-
-    // světlý okraj (volitelné)
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(center - w / 2, 320, w, 30);
-}
-
-        );
-    }
+  } else {
+    ctx.fillText("Všechny checkpointy projety!", 20, 80);
+  }
 }
 
 function drawGameOver() {
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "white";
-    ctx.font = "40px Arial";
-    ctx.fillText("GAME OVER", 260, 250);
-    ctx.font = "20px Arial";
-    ctx.fillText("Stiskni R pro restart", 285, 290);
+  ctx.fillStyle = "rgba(0,0,0,0.7)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "white";
+  ctx.font = "40px Arial";
+  ctx.fillText("GAME OVER", canvas.width / 2 - 120, canvas.height / 2);
+  ctx.font = "20px Arial";
+  ctx.fillText("R = restart", canvas.width / 2 - 50, canvas.height / 2 + 40);
 }
 
-// ===== LOOP =====
+// ================= LOOP =================
 function loop() {
-    update();
-    drawRoad();
-    drawCheckpoint(); // 👈 checkpoint pruh
-    drawCar();
-    drawHUD();
-    if (gameOver) drawGameOver();
-    requestAnimationFrame(loop);
+  update();
+  drawRoad();
+  drawCheckpoint();
+  drawCar();
+  drawHUD();
+  if (gameOver) drawGameOver();
+  requestAnimationFrame(loop);
 }
 
-// ===== START =====
+// ================= START =================
 resetGame();
 loop();
 </script>
+
 </body>
 </html>
+
+
 
 
 
