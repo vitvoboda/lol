@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Piškvorky – Malé/Velké pole</title>
+<style>
+body{font-family:Arial;text-align:center;background:#0f172a;color:white;}
+h1{margin-top:20px;}
+#controls button{margin:5px;padding:10px 15px;border:none;border-radius:6px;cursor:pointer;}
+#board{display:grid;justify-content:center;margin-top:20px;}
+.cell{background:#1e293b;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:5px;font-weight:bold;}
+.cell:hover{background:#334155;}
+#score{margin-top:15px;font-size:18px;}
+</style>
+</head>
+<body>
+
+<h1>⭕ Piškvorky – Malé/Velké pole ❌</h1>
+
+<div id="controls">
+  <button onclick="setMode('small')">Malé pole 3×3</button>
+  <button onclick="setMode('big')">Velké pole 15×15</button>
+  <button onclick="resetGame()">Nová hra</button>
+</div>
+
+<h2 id="status">Vyber velikost pole</h2>
+
+<div id="score">
+Ty: <span id="playerScore">0</span> |
+AI: <span id="aiScore">0</span> |
+Remízy: <span id="drawScore">0</span>
+</div>
+
+<div id="board"></div>
+
+<script>
+let board=[], size=0, winLength=0, gameOver=false
+let playerScore=0, aiScore=0, drawScore=0
+
+function setMode(mode){
+  if(mode==='small'){size=3;winLength=3}
+  else if(mode==='big'){size=15;winLength=5}
+  board=Array(size*size).fill("")
+  gameOver=false
+  createBoard()
+  document.getElementById("status").innerText="Tvůj tah: X"
+}
+
+function createBoard(){
+  const boardDiv=document.getElementById("board")
+  boardDiv.innerHTML=""
+  boardDiv.style.gridTemplateColumns=`repeat(${size},30px)`
+  const cellSize=(size===3)?60:30
+  for(let i=0;i<size*size;i++){
+    let cell=document.createElement("div")
+    cell.className="cell"
+    cell.style.width=cellSize+'px'
+    cell.style.height=cellSize+'px'
+    cell.style.fontSize=(size===3)?'40px':'20px'
+    cell.innerText=board[i]
+    cell.onclick=()=>playerMove(i)
+    boardDiv.appendChild(cell)
+  }
+}
+
+function playerMove(i){
+  if(board[i]!="" || gameOver || size===0) return
+  board[i]="X"
+  if(checkWin(i,"X")){playerScore++;updateScore();endGame("Vyhrál jsi!");return}
+  if(boardFull()){drawScore++;updateScore();endGame("Remíza");return}
+  aiMove()
+  createBoard()
+}
+
+function aiMove(){
+  if(gameOver) return
+  let empty=board.map((v,i)=>v==""?i:null).filter(v=>v!==null)
+  if(empty.length===0) return
+  // jednoduchá AI: blokuje hráče, nebo náhodný tah
+  let move=findBestMove("O") // vyhrát
+  if(move===null) move=findBestMove("X") // zablokovat
+  if(move===null) move=empty[Math.floor(Math.random()*empty.length)]
+  board[move]="O"
+  if(checkWin(move,"O")){aiScore++;updateScore();endGame("AI vyhrála");return}
+  if(boardFull()){drawScore++;updateScore();endGame("Remíza");return}
+}
+
+function findBestMove(p){
+  for(let i=0;i<size*size;i++){
+    if(board[i]==""){
+      board[i]=p
+      if(checkWin(i,p)){board[i]=""; return i}
+      board[i]=""
+    }
+  }
+  return null
+}
+
+function checkWin(i,p){
+  const directions=[[1,0],[0,1],[1,1],[1,-1]]
+  let x=i%size, y=Math.floor(i/size)
+  for(let [dx,dy] of directions){
+    let count=1
+    for(let step=1;step<winLength;step++){
+      let nx=x+dx*step, ny=y+dy*step
+      if(nx<0||ny<0||nx>=size||ny>=size) break
+      if(board[ny*size+nx]===p) count++
+      else break
+    }
+    for(let step=1;step<winLength;step++){
+      let nx=x-dx*step, ny=y-dy*step
+      if(nx<0||ny<0||nx>=size||ny>=size) break
+      if(board[ny*size+nx]===p) count++
+      else break
+    }
+    if(count>=winLength) return true
+  }
+  return false
+}
+
+function boardFull(){return !board.includes("")}
+function endGame(text){gameOver=true;document.getElementById("status").innerText=text;createBoard()}
+function updateScore(){
+  document.getElementById("playerScore").innerText=playerScore
+  document.getElementById("aiScore").innerText=aiScore
+  document.getElementById("drawScore").innerText=drawScore
+}
+function resetGame(){
+  if(size===0) return
+  board=Array(size*size).fill("")
+  gameOver=false
+  document.getElementById("status").innerText="Tvůj tah: X"
+  createBoard()
+}
+</script>
+<p>kolikrátjsi vyhrál rekort:2</p>
+</body>
+</html>
