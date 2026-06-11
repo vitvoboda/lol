@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+    
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zaheslovaná stránka</title>
+<link rel="stylesheet" href="heslo.css">
+</head>
+<body>
+<h2>Zadej heslo:</h2>
+ 
+    <input type="password" id="heslo">
+ 
+ 
+    <button onclick="zkontroluj()">Osrat</button>
+ 
+    <div id="obsah">
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Počítadlo kliknutí</title>
+    <style>
+        /* Základní stylování stránky */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        /* Stylování karty s počítadlem */
+        .counter-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            min-width: 250px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        /* Stylování samotného čísla */
+        .count-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 20px 0;
+        }
+
+        /* Stylování tlačítka */
+        .click-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        /* Efekt při najetí myší */
+        .click-btn:hover {
+            background-color: #0056b3;
+        }
+
+        /* Efekt při kliknutí */
+        .click-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="counter-container">
+        <h1>Počítadlo</h1>
+        <div class="count-display" id="counter">0</div>
+        <button class="click-btn" id="clickMeBtn">Klikni mě!</button>
+    </div>
+
+    <script>
+        // Výběr prvků z HTML
+        const counterDisplay = document.getElementById('counter');
+        const clickButton = document.getElementById('clickMeBtn');
+
+        // Výchozí stav počítadla
+        let count = 0;
+
+        // Funkce, která se spustí při každém kliknutí
+        clickButton.addEventListener('click', () => {
+            count++; // Přičte 1
+            counterDisplay.textContent = count; // Aktualizuje číslo na obrazovce
+        });
+    </script>
+
+</body>
+</html>
+    <script src="script.js"></script>
+</body>
+</html>
+                                                                                                                                           

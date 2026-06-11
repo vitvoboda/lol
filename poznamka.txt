@@ -1,1 +1,3 @@
-git add .  git commit -m "aktualizace"   git push
+git add .  git commit -m "aktualizace"   git push   
+co tam mám  napsat kdybich chtěl přidat jednim klikem více přepnuti
+kde je část ktera urcuje o kolik se zvedne počet kliknutí v tomto kodu:

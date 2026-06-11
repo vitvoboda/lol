@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOSÁK.exe Simulator</title>
+ 
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+ 
+body{
+    font-family:Arial,sans-serif;
+    min-height:100vh;
+    text-align:center;
+    color:white;
+    padding:20px;
+ 
+    background:linear-gradient(
+        -45deg,
+        #ff0000,
+        #ff7300,
+        #00c3ff,
+        #7b2cff,
+        #00ff88
+    );
+    background-size:400% 400%;
+    animation:bgMove 12s ease infinite;
+}
+ 
+@keyframes bgMove{
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+}
+ 
+h1{
+    margin:20px;
+    text-shadow:0 0 20px white;
+}
+ 
+button{
+    padding:15px 25px;
+    margin:10px;
+    border:none;
+    border-radius:12px;
+    font-size:18px;
+    cursor:pointer;
+    font-weight:bold;
+}
+ 
+button:hover{
+    transform:scale(1.08);
+}
+ 
+#randomReason,
+#list{
+    max-width:1000px;
+    margin:20px auto;
+    background:rgba(0,0,0,.3);
+    padding:20px;
+    border-radius:20px;
+}
+ 
+#randomReason{
+    font-size:24px;
+}
+ 
+li{
+    margin:8px 0;
+}
+</style>
+</head>
+<body>
+ 
+<h1>😂 BOSÁK.exe Simulator 😂</h1>
+ 
+<button onclick="randomReason()">🎲 Náhodný důvod</button>
+<button onclick="showAll()">📜 Zobrazit 101 důvodů</button>
+ 
+<div id="randomReason">
+Klikni na 🎲
+</div>
+ 
+<ol id="list"></ol>
+ 
+<script>
+const reasons = [
+"😂 Simuluje protože je těhotný",
+"Simuluje v Liberci.",
+"Je na mateřské protože má holku.",
+"Simuluje při snídani.",
+"Simuluje při obědě.",
+"Simuluje při večeři.",
+"Simuluje při hraní Minecraftu.",
+"Simuluje na Discordu.",
+"Simuluje na TikToku.",
+"Simuluje při čekání na autobus.",
+"Simuluje při čekání na pizzu.",
+"Simuluje při hledání ponožek.",
+"Simuluje při hledání klíčů.",
+"Simuluje při otevírání dveří.",
+"Simuluje při zavírání dveří.",
+"Simuluje při hraní šachu.",
+"Simuluje při hraní karet.",
+"Simuluje při sledování filmu.",
+"Simuluje při sledování seriálu.",
+"Simuluje při sledování reklam.",
+"Simuluje při nakupování.",
+"Simuluje ve frontě.",
+"Simuluje při úklidu.",
+"Simuluje při vysávání.",
+"Simuluje při mytí nádobí.",
+"Simuluje při vaření.",
+"Simuluje při pečení.",
+"Simuluje na dovolené.",
+"Simuluje na výletě.",
+"Simuluje na táboře.",
+"Simuluje při táboráku.",
+"Simuluje při zpívání.",
+"Simuluje při tancování.",
+"Simuluje při běhání.",
+"Simuluje při chůzi.",
+"Simuluje při stání.",
+"Simuluje při sezení.",
+"Simuluje při ležení.",
+"Simuluje preventivně.",
+"Simuluje pro jistotu.",
+"Simuluje ze zvyku.",
+"Simuluje z tradice.",
+"Simuluje z nudy.",
+"Simuluje z radosti.",
+"Simuluje ze smutku.",
+"Simuluje kvůli pondělí.",
+"Simuluje kvůli pátku.",
+"Simuluje kvůli víkendu.",
+"Simuluje kvůli počasí.",
+"Simuluje protože prší.",
+"Simuluje protože svítí slunce.",
+"Simuluje protože sněží.",
+"Simuluje v tramvaji.",
+"Simuluje ve vlaku.",
+"Simuluje v autě.",
+"Simuluje na kole.",
+"Simuluje na koloběžce.",
+"Simuluje při plavání.",
+"Simuluje při rybaření.",
+"Simuluje při grilování.",
+"Simuluje při opékání buřtů.",
+"Simuluje při telefonování.",
+"Simuluje při psaní zpráv.",
+"Simuluje při focení.",
+"Simuluje při natáčení videa.",
+"Simuluje při hraní her.",
+"Simuluje při oslavě.",
+"Simuluje na narozeninách.",
+"Simuluje na Silvestra.",
+"Simuluje na Vánoce.",
+"Simuluje na Velikonoce.",
+"Simuluje při vstávání.",
+"Simuluje při usínání.",
+"Simuluje při přemýšlení.",
+"Simuluje při nepřemýšlení.",
+"Simuluje když má hlad.",
+"Simuluje když je najedený.",
+"Simuluje když se nudí.",
+"Simuluje když se baví.",
+"Simuluje při hraní na schovku.",
+"Simuluje při počítání do deseti.",
+"Simuluje při otevírání ledničky.",
+"Simuluje při zavírání ledničky.",
+"Simuluje při nabíjení mobilu.",
+"Simuluje při vybíjení mobilu.",
+"Simuluje když Wi-Fi nejde.",
+"Simuluje když Wi-Fi jde.",
+"Simuluje při hledání dálkového ovladače.",
+"Simuluje při hraní deskovek.",
+"Simuluje na hřišti.",
+"Simuluje na parkovišti.",
+"Simuluje na lavičce.",
+"Simuluje při fandění.",
+"Simuluje při cvičení.",
+"Simuluje ve fitku.",
+"Simuluje při objednávání pizzy.",
+"Simuluje protože může.",
+"Simuluje protože je těhotný.",
+"Simuluje i když zrovna nesimuluje.",
+"Simuluje protože je děvka.",
+"Simuluje protože měl smažák.",
+ 
+];
+ 
+function randomReason(){
+    const r = reasons[Math.floor(Math.random()*reasons.length)];
+    document.getElementById("randomReason").innerHTML = "😂 " + r;
+}
+ 
+function showAll(){
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+ 
+    reasons.forEach(reason=>{
+        const li = document.createElement("li");
+        li.textContent = reason;
+        list.appendChild(li);
+    });
+}
+</script>
+ 
+</body>
+</html>
+ 
