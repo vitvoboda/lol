@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clicker Hra</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .game-container {
+            background: #2e2e48;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 350px;
+        }
+        h1 {
+            margin-top: 0;
+            color: #ffcc00;
+        }
+        .counter {
+            font-size: 24px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .click-btn {
+            background-color: #ffcc00;
+            color: #1e1e2f;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            box-shadow: 0 4px 10px rgba(255, 204, 0, 0.3);
+        }
+        .click-btn:active {
+            transform: scale(0.95);
+            background-color: #e6b800;
+        }
+        .shop {
+            margin-top: 25px;
+            border-top: 1px solid #444466;
+            padding-top: 15px;
+        }
+        .shop-btn {
+            background-color: #4e4eb8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            transition: background-color 0.2s;
+        }
+        .shop-btn:hover:not(:disabled) {
+            background-color: #3e3e98;
+        }
+        .shop-btn:disabled {
+            background-color: #444455;
+            color: #888899;
+            cursor: not-allowed;
+        }
+        .info {
+            font-size: 14px;
+            color: #aaaacc;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>Clicker hra</h1>
+        <div class="counter">Kliky: <span id="score">0</span></div>
+        <div class="info">Za sekundu: <span id="cps">0</span></div>
+        <br>
+        <button class="click-btn" onclick="handleClick()">KLIKNI!</button>
+
+        <div class="shop">
+            <h3>Obchod</h3>
+            <div id="machine-status" class="info">Zakoupené stroje: 0 / 4</div>
+            <button id="buy-btn" class="shop-btn" onclick="buyMachine()">Koupit stroj (Cena: 20 kliků)</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let clickPower = 1;
+        let machinesCount = 0;
+        let maxMachines = 4;
+        let machineCost = 20;
+        let machinePower = 1; // Kolik kliků za sekundu dává jeden stroj
+        let isUpgraded = false;
+
+        const scoreElement = document.getElementById("score");
+        const cpsElement = document.getElementById("cps");
+        const buyBtn = document.getElementById("buy-btn");
+        const machineStatus = document.getElementById("machine-status");
+
+        function handleClick() {
+            score += clickPower;
+            updateDisplay();
+        }
+
+        function buyMachine() {
+            if (!isUpgraded && machinesCount < maxMachines) {
+                if (score >= machineCost) {
+                    score -= machineCost;
+                    machinesCount++;
+                    machineCost = Math.floor(machineCost * 1.5); // Zvyšování ceny
+                    
+                    if (machinesCount === maxMachines) {
+                        buyBtn.innerText = "Vylepšit stroje (Cena: 150 kliků)";
+                        machineStatus.innerText = "Dosaženo max. počtu! Můžeš je vylepšit.";
+                    } else {
+                        buyBtn.innerText = `Koupit stroj (Cena: ${machineCost} kliků)`;
+                        machineStatus.innerText = `Zakoupené stroje: ${machinesCount} / ${maxMachines}`;
+                    }
+                    updateDisplay();
+                }
+            } else if (machinesCount === maxMachines && !isUpgraded) {
+                // Vylepšení strojů
+                let upgradeCost = 150;
+                if (score >= upgradeCost) {
+                    score -= upgradeCost;
+                    isUpgraded = true;
+                    machinePower = 5; // Zvýšení výkonu strojů po vylepšení
+                    buyBtn.innerText = "Stroje jsou plně vylepšené!";
+                    buyBtn.disabled = true;
+                    machineStatus.innerText = "Stroje jsou vylepšené (výkon x5)!";
+                    updateDisplay();
+                }
+            }
+        }
+
+        function updateDisplay() {
+            scoreElement.innerText = Math.floor(score);
+            let currentCPS = machinesCount * machinePower;
+            cpsElement.innerText = currentCPS;
+
+            // Kontrola tlačítek pro nákup/vylepšení
+            if (!isUpgraded) {
+                if (machinesCount < maxMachines) {
+                    if (score >= machineCost) {
+                        buyBtn.disabled = false;
+                    } else {
+                        buyBtn.disabled = true;
+                    }
+                } else {
+                    if (score >= 150) {
+                        buyBtn.disabled = false;
+                    } else {
+                        buyBtn.disabled = true;
+                    }
+                }
+            }
+        }
+
+        // Herní smyčka pro automatické přičítání kliků (stroje)
+        setInterval(function() {
+            if (machinesCount > 0) {
+                score += (machinesCount * machinePower) / 10; // Počítá se plynule každých 100ms
+                updateDisplay();
+            }
+        }, 100);
+
+        // Pravidelná kontrola dostupnosti tlačítek i bez klikání
+        setInterval(updateDisplay, 500);
+    </script>
+
+</body>
+</html>
+</body>
+</html>
