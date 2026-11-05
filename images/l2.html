@@ -1,0 +1,342 @@
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>V10 Racing</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;overflow:hidden;background:#247b36;font-family:Arial;color:white;touch-action:none}
+canvas{display:block;width:100vw;height:100vh}
+#hud{position:absolute;top:9px;left:9px;background:#001b0c;padding:12px 17px;border-radius:14px;z-index:2;font-weight:bold;line-height:1.7}
+#controls{position:absolute;bottom:15px;left:0;right:0;display:flex;justify-content:space-between;padding:0 14px;z-index:3}
+.group{display:flex;gap:12px}
+button{width:68px;height:68px;border:2px solid white;border-radius:17px;background:#182c20;color:white;font-size:27px;font-weight:bold;touch-action:none}
+button:active{background:#c20}
+#screen{position:absolute;inset:0;background:#000c;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;z-index:5}
+#screen button{width:auto;padding:0 30px;background:#c20}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+🏎️ V10 RACING<br>
+Rychlost: <span id="speed">0</span> km/h<br>
+Skóre: <span id="score">0</span><br>
+Stav: <span id="status">PŘIPRAVEN</span>
+</div>
+
+<div id="controls">
+ <div class="group">
+  <button id="left">◀</button>
+  <button id="right">▶</button>
+ </div>
+ <div class="group">
+  <button id="brake">▼</button>
+  <button id="gas">▲</button>
+ </div>
+</div>
+
+<div id="screen">
+ <h1 id="title">V10 RACING</h1>
+ <p id="message">Vyhýbej se autům a zvládni zatáčky!</p>
+ <button id="start">START ZÁVODU</button>
+</div>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+let W,H,D;
+function resize(){
+ D=devicePixelRatio||1;
+ W=innerWidth;H=innerHeight;
+ canvas.width=W*D;canvas.height=H*D;
+ ctx.setTransform(D,0,0,D,0,0);
+}
+addEventListener("resize",resize);resize();
+
+const keys={left:false,right:false,gas:false,brake:false};
+function bind(id,key){
+ const b=document.getElementById(id);
+ b.addEventListener("pointerdown",e=>{
+  e.preventDefault();keys[key]=true;
+  b.setPointerCapture(e.pointerId);
+ });
+ for(const ev of ["pointerup","pointercancel","lostpointercapture"])
+  b.addEventListener(ev,()=>keys[key]=false);
+}
+bind("left","left");bind("right","right");
+bind("gas","gas");bind("brake","brake");
+
+addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a")keys.left=true;
+ if(e.key==="ArrowRight"||e.key==="d")keys.right=true;
+ if(e.key==="ArrowUp"||e.key==="w")keys.gas=true;
+ if(e.key==="ArrowDown"||e.key==="s")keys.brake=true;
+});
+addEventListener("keyup",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a")keys.left=false;
+ if(e.key==="ArrowRight"||e.key==="d")keys.right=false;
+ if(e.key==="ArrowUp"||e.key==="w")keys.gas=false;
+ if(e.key==="ArrowDown"||e.key==="s")keys.brake=false;
+});
+
+let speed=0,score=0;
+let lane=0,curve=0,curveTarget=0;
+let roadOffset=0,playing=false,crashed=false;
+let cars=[],spawnTimer=0,shake=0;
+
+// Silnice: střed a polovina šířky v každé výšce
+function roadCenter(y){
+ const p=Math.max(0,Math.min(1,(y-H*.22)/(H*.78)));
+ return W/2 + curve*Math.pow(p,1.5)*W*.24;
+}
+function roadHalf(y){
+ const p=Math.max(0,Math.min(1,(y-H*.22)/(H*.78)));
+ return W*(.065+.36*p);
+}
+
+// Zvuky
+let audio=null,master=null;
+function initAudio(){
+ if(audio){audio.resume();return}
+ audio=new (window.AudioContext||window.webkitAudioContext)();
+ master=audio.createGain();
+ master.gain.value=.35;
+ master.connect(audio.destination);
+}
+let engine=null,engineGain=null,engineFilter=null;
+function startEngine(){
+ if(engine)return;
+ engineFilter=audio.createBiquadFilter();
+ engineFilter.type="lowpass";
+ engineFilter.frequency.value=400;
+ engineGain=audio.createGain();
+ engineGain.gain.value=.001;
+ engine.connect(engineFilter);
+ engineFilter.connect(engineGain);
+ engineGain.connect(master);
+}
+function updateEngine(){
+ if(!audio||!engine)return;
+ let t=audio.currentTime;
+ engine.frequency.setTargetAtTime(45+speed*.65,t,.08);
+ engineFilter.frequency.setTargetAtTime(350+speed*5+(keys.gas?250:0),t,.1);
+ engineGain.gain.setTargetAtTime(playing?(keys.gas?.12:.055):.001,t,.1);
+}
+function crashSound(){
+ if(!audio)return;
+ const o=audio.createOscillator();
+ const g=audio.createGain();
+ o.type="sawtooth";
+ o.frequency.setValueAtTime(100,audio.currentTime);
+ o.frequency.exponentialRampToValueAtTime(25,audio.currentTime+.35);
+ g.gain.setValueAtTime(.4,audio.currentTime);
+ g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.4);
+ o.connect(g);g.connect(master);
+ o.start();o.stop(audio.currentTime+.42);
+}
+
+function drawRoad(){
+ ctx.fillStyle="#247b36";
+ ctx.fillRect(0,0,W,H);
+
+ const top=H*.22;
+ ctx.fillStyle="#555";
+ ctx.beginPath();
+ ctx.moveTo(roadCenter(top)-roadHalf(top),top);
+ ctx.lineTo(roadCenter(top)+roadHalf(top),top);
+ ctx.lineTo(roadCenter(H)+roadHalf(H),H);
+ ctx.lineTo(roadCenter(H)-roadHalf(H),H);
+ ctx.closePath();ctx.fill();
+
+ // Bílé okraje silnice
+ ctx.strokeStyle="#fff";
+ ctx.lineWidth=5;
+ for(const side of [-1,1]){
+  ctx.beginPath();
+  ctx.moveTo(roadCenter(top)+side*roadHalf(top),top);
+  ctx.lineTo(roadCenter(H)+side*roadHalf(H),H);
+  ctx.stroke();
+ }
+
+ // Přerušovaná čára uprostřed
+ for(let i=0;i<18;i++){
+  let p=((i/18+roadOffset*.0008)%1);
+  let y=top+p*(H-top);
+  let x=roadCenter(y);
+  let size=2+p*7;
+  ctx.fillStyle="#fff";
+  ctx.fillRect(x-size/2,y,size,Math.max(3,p*28));
+ }
+}
+
+function drawCar(x,y,s,color){
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.scale(s,s);
+
+ ctx.fillStyle="#111";
+ ctx.fillRect(-27,-34,9,23);
+ ctx.fillRect(18,-34,9,23);
+ ctx.fillRect(-27,20,9,23);
+ ctx.fillRect(18,20,9,23);
+
+ ctx.fillStyle=color;
+ ctx.beginPath();
+ ctx.moveTo(-22,42);
+ ctx.lineTo(-27,10);
+ ctx.lineTo(-18,-30);
+ ctx.lineTo(-11,-43);
+ ctx.lineTo(11,-43);
+ ctx.lineTo(18,-30);
+ ctx.lineTo(27,10);
+ ctx.lineTo(22,42);
+ ctx.closePath();ctx.fill();
+
+ ctx.fillStyle="#162c40";
+ ctx.beginPath();
+ ctx.moveTo(-16,-19);
+ ctx.lineTo(-11,-36);
+ ctx.lineTo(11,-36);
+ ctx.lineTo(16,-19);
+ ctx.closePath();ctx.fill();
+
+ ctx.fillStyle="#fff";
+ ctx.fillRect(-18,31,8,4);
+ ctx.fillRect(10,31,8,4);
+ ctx.restore();
+}
+
+function spawnCar(){
+ // Auto se vždy vytvoří uvnitř silnice
+ const carLane=(Math.random()-.5)*1.25;
+ cars.push({
+  p:0,
+  lane:carLane,
+  color:["#ffcc00","#168cff","#ddd","#e21b16","#22aa55"][Math.floor(Math.random()*5)]
+ });
+}
+
+function crash(reason){
+ if(crashed)return;
+ crashed=true;playing=false;speed=0;shake=18;
+ crashSound();
+ document.getElementById("status").textContent="HAVÁRIE";
+ document.getElementById("title").textContent="💥 NABOURAL JSI!";
+ document.getElementById("message").textContent=reason+" Skóre: "+Math.floor(score);
+ document.getElementById("start").textContent="RESTART";
+ document.getElementById("screen").style.display="flex";
+}
+
+function reset(){
+ speed=0;score=0;lane=0;curve=0;curveTarget=0;
+ roadOffset=0;cars=[];spawnTimer=50;
+ crashed=false;playing=true;
+ document.getElementById("status").textContent="ZÁVOD";
+ document.getElementById("screen").style.display="none";
+}
+
+document.getElementById("start").onclick=()=>{
+ initAudio();
+ if(!engine){
+  engine=audio.createOscillator();
+  engine.type="sawtooth";
+  engine.frequency.value=45;
+ }
+ startEngine();
+ reset();
+};
+
+function update(){
+ if(!playing)return;
+
+ if(keys.gas)speed+=.22;
+ else speed-=.025;
+ if(keys.brake)speed-=.4;
+ speed=Math.max(0,Math.min(230,speed));
+
+ // Řízení
+ if(keys.left)lane-=.025+speed*.00008;
+ if(keys.right)lane+=.025+speed*.00008;
+
+ // Zatáčky
+ if(Math.random()<.008)
+  curveTarget=(Math.random()-.5)*1.5;
+ curve+=(curveTarget-curve)*.008;
+
+ // Přirozený vliv zatáčky
+ lane-=curve*.0005*speed;
+
+ roadOffset+=speed*.2;
+ score+=speed*.006;
+
+ // Auta na silnici
+ spawnTimer--;
+ if(spawnTimer<=0){
+  spawnCar();
+  spawnTimer=Math.max(35,100-speed*.2+Math.random()*35);
+ }
+
+ for(const car of cars){
+  car.p+=.003+speed*.000035;
+  const y=H*.22+car.p*(H*.85);
+  const x=roadCenter(y)+car.lane*roadHalf(y)*.72;
+  car.x=x;car.y=y;
+
+  // Kontrola nárazu
+  const playerY=H*.78;
+  const playerX=roadCenter(playerY)+lane*roadHalf(playerY)*.8;
+  if(Math.abs(y-playerY)<65 && Math.abs(x-playerX)<43){
+   crash("Narazil jsi do auta!");
+   return;
+  }
+ }
+ cars=cars.filter(c=>c.p<1.1);
+
+ // Kontrola krajnice
+ if(Math.abs(lane)>.88){
+  if(speed>35){
+   crash("Vyjel jsi ze silnice!");
+   return;
+  }
+  speed=Math.max(0,speed-1);
+ }
+
+ updateEngine();
+}
+
+function draw(){
+ ctx.save();
+ if(shake>.5){
+  ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+  shake*=.85;
+ }
+ drawRoad();
+
+ // Ostatní auta
+ for(const car of cars){
+  const s=.45+car.p*.7;
+  drawCar(car.x,car.y,s,car.color);
+ }
+
+ // Hráčovo auto
+ const py=H*.78;
+ const px=roadCenter(py)+lane*roadHalf(py)*.8;
+ drawCar(px,py,1.12,"#168cff");
+
+ ctx.restore();
+
+ document.getElementById("speed").textContent=Math.round(speed);
+ document.getElementById("score").textContent=Math.floor(score);
+}
+function loop(){
+ update();draw();
+ requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

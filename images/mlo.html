@@ -1,249 +1,407 @@
+
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2.5D Retro Racer - Jemné Zatáčky</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-    body { background: #050508; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
-    #game-container { position: relative; width: 800px; height: 600px; max-width: 100vw; max-height: 100vh; background: #000; border: 4px solid #00f0ff; box-shadow: 0 0 20px #00f0ff; }
-    canvas { width: 100%; height: 100%; display: block; }
-    .hud { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; pointer-events: none; }
-    .hud-box { background: rgba(0, 0, 0, 0.85); border: 2px solid #00f0ff; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 18px; color: #fff; text-shadow: 0 0 5px #00f0ff; }
-    .hud-box span { font-size: 24px; color: #ff0055; }
-    #overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
-    #overlay h1 { font-size: 48px; color: #ff0055; margin-bottom: 20px; text-shadow: 0 0 10px #ff0055; }
-    #overlay p { font-size: 20px; margin-bottom: 25px; }
-    #overlay button { padding: 12px 30px; font-size: 18px; font-weight: bold; background: #00f0ff; color: #000; border: none; border-radius: 5px; cursor: pointer; }
-    .touch-controls { position: absolute; bottom: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; pointer-events: none; }
-    .t-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; pointer-events: auto; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: white; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>V10 Racing</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;overflow:hidden;background:#247b36;font-family:Arial;color:white;touch-action:none}
+canvas{display:block;width:100vw;height:100vh}
+#hud{position:absolute;top:9px;left:9px;background:#001b0c;padding:12px 17px;border-radius:14px;z-index:2;font-weight:bold;line-height:1.7}
+#controls{position:absolute;bottom:15px;left:0;right:0;display:flex;justify-content:space-between;padding:0 14px;z-index:3}
+.group{display:flex;gap:12px}
+button{width:68px;height:68px;border:2px solid white;border-radius:17px;background:#182c20;color:white;font-size:27px;font-weight:bold;touch-action:none}
+button:active{background:#c20}
+#screen{position:absolute;inset:0;background:#000c;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;z-index:5}
+#screen button{width:auto;padding:0 30px;background:#c20}
+</style>
 </head>
 <body>
+<canvas id="game"></canvas>
 
-<div id="game-container">
-  <canvas id="canvas" width="800" height="600"></canvas>
-  
-  <div class="hud">
-    <div class="hud-box">RYCHLOST: <span id="speed">0</span> km/h</div>
-    <div class="hud-box">CHECKPOINTY: <span id="cp">255</span> / 255</div>
-  </div>
+<div id="hud">
+🏎️ V10 RACING<br>
+Rychlost: <span id="speed">0</span> km/h<br>
+Skóre: <span id="score">0</span><br>
+Stav: <span id="status">PŘIPRAVEN</span>
+</div>
 
-  <div id="overlay">
-    <h1 id="ov-title">NÁRAZ DO ZDI!</h1>
-    <p id="ov-msg">Stiskni [R] nebo tlačítko pro restart</p>
-    <button onclick="resetGame()">HRÁT ZNOVU</button>
-  </div>
+<div id="controls">
+ <div class="group">
+  <button id="left">◀</button>
+  <button id="right">▶</button>
+ </div>
+ <div class="group">
+  <button id="brake">▼</button>
+  <button id="gas">▲</button>
+ </div>
+</div>
 
-  <div class="touch-controls">
-    <div style="display:flex; gap:10px;">
-      <div class="t-btn" id="btn-left">◄</div>
-      <div class="t-btn" id="btn-right">►</div>
-    </div>
-    <div style="display:flex; gap:10px;">
-      <div class="t-btn" id="btn-brake">▼</div>
-      <div class="t-btn" id="btn-gas">▲</div>
-    </div>
-  </div>
+<div id="screen">
+ <h1 id="title">V10 RACING</h1>
+ <p id="message">Připrav se na závod!</p>
+ <button id="start">START ZÁVODU</button>
 </div>
 
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+let W,H,D;
 
-let speed = 0;
-let playerX = 0; // -1 až 1
-let pos = 0;
-let remainingCP = 255;
-let isDead = false;
+function resize(){
+ D=devicePixelRatio||1;
+ W=innerWidth;H=innerHeight;
+ canvas.width=W*D;canvas.height=H*D;
+ ctx.setTransform(D,0,0,D,0,0);
+}
+addEventListener("resize",resize);resize();
 
-const keys = {};
-window.addEventListener('keydown', e => { keys[e.key] = true; if(e.key.toLowerCase()==='r') resetGame(); });
-window.addEventListener('keyup', e => keys[e.key] = false);
+const keys={left:false,right:false,gas:false,brake:false};
 
-const bindTouch = (id, key) => {
-  const el = document.getElementById(id);
-  el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
-  el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
-};
-bindTouch('btn-left', 'ArrowLeft');
-bindTouch('btn-right', 'ArrowRight');
-bindTouch('btn-gas', 'ArrowUp');
-bindTouch('btn-brake', 'ArrowDown');
+function bind(id,key){
+ const b=document.getElementById(id);
+ b.addEventListener("pointerdown",e=>{
+  e.preventDefault();keys[key]=true;
+  b.setPointerCapture(e.pointerId);
+ });
+ for(const ev of ["pointerup","pointercancel","lostpointercapture"])
+  b.addEventListener(ev,()=>keys[key]=false);
+}
+bind("left","left");bind("right","right");
+bind("gas","gas");bind("brake","brake");
 
-function resetGame() {
-  speed = 0;
-  playerX = 0;
-  pos = 0;
-  remainingCP = 255;
-  isDead = false;
-  document.getElementById('overlay').style.display = 'none';
-  document.getElementById('cp').innerText = remainingCP;
+addEventListener("keydown",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a")keys.left=true;
+ if(e.key==="ArrowRight"||e.key==="d")keys.right=true;
+ if(e.key==="ArrowUp"||e.key==="w")keys.gas=true;
+ if(e.key==="ArrowDown"||e.key==="s")keys.brake=true;
+});
+addEventListener("keyup",e=>{
+ if(e.key==="ArrowLeft"||e.key==="a")keys.left=false;
+ if(e.key==="ArrowRight"||e.key==="d")keys.right=false;
+ if(e.key==="ArrowUp"||e.key==="w")keys.gas=false;
+ if(e.key==="ArrowDown"||e.key==="s")keys.brake=false;
+});
+
+let speed=0,score=0,playerLane=0;
+let curve=0,curveTarget=0,roadOffset=0;
+let playing=false,crashed=false,cars=[];
+let spawnTimer=0,shake=0,lastTime=0;
+
+// HLUBOKÝ A MĚKKÝ ZVUK MOTORU
+let audio=null,master=null,engine1=null,engine2=null;
+let engineGain=null,subGain=null,engineFilter=null;
+
+function initAudio(){
+ if(audio){
+  audio.resume();
+  return;
+ }
+
+ audio=new(window.AudioContext||window.webkitAudioContext)();
+
+ master=audio.createGain();
+ master.gain.value=.20;
+
+ // Omezení náhlých hlasitých špiček
+ const compressor=audio.createDynamicsCompressor();
+ compressor.threshold.value=-28;
+ compressor.knee.value=20;
+ compressor.ratio.value=5;
+ compressor.attack.value=.03;
+ compressor.release.value=.3;
+
+ master.connect(compressor);
+ compressor.connect(audio.destination);
+
+ engineFilter=audio.createBiquadFilter();
+ engineFilter.type="lowpass";
+ engineFilter.frequency.value=220;
+ engineFilter.Q.value=.5;
+
+ engineGain=audio.createGain();
+ engineGain.gain.value=.001;
+
+ engine1=audio.createOscillator();
+ engine1.type="triangle";
+ engine1.frequency.value=35;
+ engine1.connect(engineGain);
+ engineGain.connect(engineFilter);
+ engineFilter.connect(master);
+ engine1.start();
+
+ // Jemný hluboký bas
+ engine2=audio.createOscillator();
+ engine2.type="sine";
+ engine2.frequency.value=22;
+
+ subGain=audio.createGain();
+ subGain.gain.value=.08;
+
+ engine2.connect(subGain);
+ subGain.connect(master);
+ engine2.start();
 }
 
-// Velmi mírné zakřivení pro extra jemné zatáčky
-function getCurve(z) {
-  return Math.sin(z * 0.001) * 0.02 + Math.cos(z * 0.0008) * 0.015;
+function updateSound(){
+ if(!audio||!engine1)return;
+
+ const t=audio.currentTime;
+ const rpm=32+speed*.55;
+
+ engine1.frequency.setTargetAtTime(rpm,t,.16);
+ engine2.frequency.setTargetAtTime(rpm*.48,t,.18);
+
+ engineFilter.frequency.setTargetAtTime(
+  170+speed*1.3+(keys.gas?65:0),t,.2
+ );
+
+ engineGain.gain.setTargetAtTime(
+  playing?(keys.gas?.055:.025):.001,t,.2
+ );
+
+ subGain.gain.setTargetAtTime(
+  playing?.055:.001,t,.2
+ );
 }
 
-function update() {
-  if (isDead) return;
+// TICHÁ TLUMENÁ BOURAČKA
+function crashSound(){
+ if(!audio)return;
 
-  // Akcelerace / Brzda
-  if (keys['ArrowUp'] || keys['w'] || keys['W']) speed += 0.8;
-  else if (keys['ArrowDown'] || keys['s'] || keys['S']) speed -= 1.2;
-  else speed *= 0.98;
+ const t=audio.currentTime;
+ const osc=audio.createOscillator();
+ const gain=audio.createGain();
+ const filter=audio.createBiquadFilter();
 
-  speed = Math.max(0, Math.min(speed, 220));
-  pos += speed * 0.15;
+ osc.type="sine";
+ osc.frequency.setValueAtTime(75,t);
+ osc.frequency.exponentialRampToValueAtTime(32,t+.3);
 
-  // Zatáčení auta
-  if (speed > 5) {
-    if (keys['ArrowLeft'] || keys['a'] || keys['A']) playerX -= 0.035;
-    if (keys['ArrowRight'] || keys['d'] || keys['D']) playerX += 0.035;
-  }
+ filter.type="lowpass";
+ filter.frequency.value=130;
 
-  // Velmi mírný vliv zatáčky na pozici
-  let currentCurve = getCurve(pos);
-  playerX -= currentCurve * (speed / 150);
+ gain.gain.setValueAtTime(.12,t);
+ gain.gain.exponentialRampToValueAtTime(.001,t+.35);
 
-  // Detekce nárazu do MODRÉ ZDI
-  if (Math.abs(playerX) > 0.85) {
-    isDead = true;
-    document.getElementById('ov-title').innerText = "NÁRAZ DO ZDI!";
-    document.getElementById('overlay').style.display = 'flex';
-  }
+ osc.connect(filter);
+ filter.connect(gain);
+ gain.connect(master);
 
-  // Checkpoint detekce (každých 800 metrů)
-  let currentCPIndex = Math.floor(pos / 800);
-  let newRemaining = 255 - currentCPIndex;
-  if (newRemaining < remainingCP && newRemaining >= 0) {
-    remainingCP = newRemaining;
-    document.getElementById('cp').innerText = remainingCP;
-  }
-
-  document.getElementById('speed').innerText = Math.round(speed);
+ osc.start(t);
+ osc.stop(t+.4);
 }
 
-function draw() {
-  ctx.clearRect(0, 0, 800, 600);
+// SILNICE
+function roadCenter(y){
+ const p=Math.max(0,Math.min(1,(y-H*.22)/(H*.78)));
+ return W/2+curve*Math.pow(p,1.6)*W*.24;
+}
+function roadHalf(y){
+ const p=Math.max(0,Math.min(1,(y-H*.22)/(H*.78)));
+ return W*(.065+.36*p);
+}
 
-  // 1. NEBE & SLUNCE
-  let grad = ctx.createLinearGradient(0, 0, 0, 260);
-  grad.addColorStop(0, '#10002b');
-  grad.addColorStop(1, '#ff0055');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 800, 260);
+function drawRoad(){
+ ctx.fillStyle="#247b36";
+ ctx.fillRect(0,0,W,H);
 
-  ctx.fillStyle = '#ffcc00';
+ const top=H*.22;
+ ctx.fillStyle="#555";
+ ctx.beginPath();
+ ctx.moveTo(roadCenter(top)-roadHalf(top),top);
+ ctx.lineTo(roadCenter(top)+roadHalf(top),top);
+ ctx.lineTo(roadCenter(H)+roadHalf(H),H);
+ ctx.lineTo(roadCenter(H)-roadHalf(H),H);
+ ctx.closePath();
+ ctx.fill();
+
+ ctx.strokeStyle="white";
+ ctx.lineWidth=5;
+
+ for(const side of [-1,1]){
   ctx.beginPath();
-  ctx.arc(400, 220, 80, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.moveTo(roadCenter(top)+side*roadHalf(top),top);
+  ctx.lineTo(roadCenter(H)+side*roadHalf(H),H);
+  ctx.stroke();
+ }
 
-  // 2. POZADÍ ZEMĚ
-  ctx.fillStyle = '#0a0a12';
-  ctx.fillRect(0, 260, 800, 340);
+ for(let i=0;i<18;i++){
+  const p=((i/18+roadOffset*.0008)%1);
+  const y=top+p*(H-top);
+  const x=roadCenter(y);
+  const size=2+p*7;
+  ctx.fillStyle="white";
+  ctx.fillRect(x-size/2,y,size,Math.max(3,p*30));
+ }
+}
 
-  // 3. VYKRESLENÍ TRAŤE, ZDÍ A CHECKPOINTŮ
-  const horizonY = 260;
-  const lines = 120;
+// AUTO
+function drawCar(x,y,s,color){
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.scale(s,s);
 
-  for (let i = lines; i > 0; i--) {
-    let p1 = i / lines;
-    let p2 = (i - 1) / lines;
+ ctx.fillStyle="#111";
+ ctx.fillRect(-27,-34,9,23);
+ ctx.fillRect(18,-34,9,23);
+ ctx.fillRect(-27,20,9,23);
+ ctx.fillRect(18,20,9,23);
 
-    let y1 = horizonY + Math.pow(p1, 2.5) * 340;
-    let y2 = horizonY + Math.pow(p2, 2.5) * 340;
+ ctx.fillStyle=color;
+ ctx.beginPath();
+ ctx.moveTo(-22,42);
+ ctx.lineTo(-27,10);
+ ctx.lineTo(-18,-30);
+ ctx.lineTo(-11,-43);
+ ctx.lineTo(11,-43);
+ ctx.lineTo(18,-30);
+ ctx.lineTo(27,10);
+ ctx.lineTo(22,42);
+ ctx.closePath();
+ ctx.fill();
 
-    let w1 = 40 + Math.pow(p1, 2.5) * 650;
-    let w2 = 40 + Math.pow(p2, 2.5) * 650;
+ ctx.fillStyle="#162c40";
+ ctx.beginPath();
+ ctx.moveTo(-16,-19);
+ ctx.lineTo(-11,-36);
+ ctx.lineTo(11,-36);
+ ctx.lineTo(16,-19);
+ ctx.closePath();
+ ctx.fill();
 
-    let segmentZ1 = pos + (1 - p1) * 1000;
-    let segmentZ2 = pos + (1 - p2) * 1000;
+ ctx.fillStyle="white";
+ ctx.fillRect(-18,31,8,4);
+ ctx.fillRect(10,31,8,4);
+ ctx.restore();
+}
 
-    // Zrušeno velké vychýlení trati
-    let curveShift1 = getCurve(segmentZ1) * (1 - p1) * 150;
-    let curveShift2 = getCurve(segmentZ2) * (1 - p2) * 150;
+function spawnCar(){
+ cars.push({
+  p:0,
+  lane:(Math.random()-.5)*1.3,
+  color:["#ffcc00","#168cff","#ddd","#e21b16","#22aa55"][Math.floor(Math.random()*5)]
+ });
+}
 
-    let x1 = 400 - (playerX * w1) + curveShift1;
-    let x2 = 400 - (playerX * w2) + curveShift2;
+function crash(reason){
+ if(crashed)return;
+ crashed=true;
+ playing=false;
+ speed=0;
+ shake=20;
+ crashSound();
 
-    let isCheckpoint = (Math.floor(segmentZ1) % 800) < 35;
+ document.getElementById("status").textContent="HAVÁRIE";
+ document.getElementById("title").textContent="💥 NABOURAL JSI!";
+ document.getElementById("message").textContent=
+  reason+" Skóre: "+Math.floor(score);
+ document.getElementById("start").textContent="RESTART";
+ document.getElementById("screen").style.display="flex";
+}
 
-    // --- A) MODRÉ 3D ZDI ---
-    let wallWidth1 = w1 * 0.22;
-    let wallWidth2 = w2 * 0.22;
+function reset(){
+ speed=0;score=0;playerLane=0;
+ curve=0;curveTarget=0;roadOffset=0;
+ cars=[];spawnTimer=60;
+ crashed=false;playing=true;
 
-    // Levá zeď
-    ctx.fillStyle = (Math.floor(segmentZ1 / 40) % 2 === 0) ? '#0055ff' : '#00aaff';
-    ctx.beginPath();
-    ctx.moveTo(x1 - w1/2 - wallWidth1, y1);
-    ctx.lineTo(x1 - w1/2, y1);
-    ctx.lineTo(x2 - w2/2, y2);
-    ctx.lineTo(x2 - w2/2 - wallWidth2, y2);
-    ctx.fill();
+ document.getElementById("status").textContent="ZÁVOD";
+ document.getElementById("screen").style.display="none";
+}
 
-    // Pravá zeď
-    ctx.beginPath();
-    ctx.moveTo(x1 + w1/2, y1);
-    ctx.lineTo(x1 + w1/2 + wallWidth1, y1);
-    ctx.lineTo(x2 + w2/2 + wallWidth2, y2);
-    ctx.lineTo(x2 + w2/2, y2);
-    ctx.fill();
+document.getElementById("start").onclick=()=>{
+ initAudio();
+ reset();
+};
 
-    // --- B) SILNICE A BÍLÝ CHECKPOINT ---
-    if (isCheckpoint) {
-      ctx.fillStyle = '#ffffff';
-    } else {
-      ctx.fillStyle = (Math.floor(segmentZ1 / 40) % 2 === 0) ? '#4d5160' : '#3a3d4a';
-    }
+function update(dt){
+ if(!playing)return;
+ const frame=dt/16.67;
 
-    ctx.beginPath();
-    ctx.moveTo(x1 - w1/2, y1);
-    ctx.lineTo(x1 + w1/2, y1);
-    ctx.lineTo(x2 + w2/2, y2);
-    ctx.lineTo(x2 - w2/2, y2);
-    ctx.fill();
+ if(keys.gas)speed+=.22*frame;
+ else speed-=.025*frame;
+ if(keys.brake)speed-=.4*frame;
 
-    // --- C) BÍLÁ STŘEDOVÁ ČÁRA ---
-    if (!isCheckpoint && (Math.floor(segmentZ1 / 50) % 2 === 0)) {
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.moveTo(x1 - w1*0.015, y1);
-      ctx.lineTo(x1 + w1*0.015, y1);
-      ctx.lineTo(x2 + w2*0.015, y2);
-      ctx.lineTo(x2 - w2*0.015, y2);
-      ctx.fill();
-    }
+ speed=Math.max(0,Math.min(230,speed));
+
+ if(keys.left)playerLane-=.025*frame;
+ if(keys.right)playerLane+=.025*frame;
+
+ if(Math.random()<.008*frame)
+  curveTarget=(Math.random()-.5)*1.5;
+
+ curve+=(curveTarget-curve)*.008*frame;
+ roadOffset+=speed*.2*frame;
+ score+=speed*.006*frame;
+
+ spawnTimer-=frame;
+ if(spawnTimer<=0){
+  spawnCar();
+  spawnTimer=Math.max(35,100-speed*.2+Math.random()*35);
+ }
+
+ for(const car of cars){
+  car.p+=(.003+speed*.000035)*frame;
+  const y=H*.22+car.p*(H*.85);
+  car.x=roadCenter(y)+car.lane*roadHalf(y)*.72;
+  car.y=y;
+
+  const py=H*.80;
+  const px=roadCenter(py)+playerLane*roadHalf(py)*.8;
+
+  if(Math.abs(y-py)<65&&Math.abs(car.x-px)<43){
+   crash("Narazil jsi do auta!");
+   return;
   }
+ }
+ cars=cars.filter(c=>c.p<1.1);
 
-  // 4. AUTO
-  let carX = 400;
-  let carY = 500;
+ if(Math.abs(playerLane)>.88){
+  if(speed>35){
+   crash("Vyjel jsi ze silnice!");
+   return;
+  }
+  speed=Math.max(0,speed-1*frame);
+ }
 
-  ctx.fillStyle = '#ff0044';
-  ctx.fillRect(carX - 60, carY, 120, 45);
-
-  ctx.fillStyle = '#00f0ff';
-  ctx.fillRect(carX - 40, carY - 20, 80, 20);
-
-  ctx.fillStyle = '#ffff00';
-  ctx.fillRect(carX - 55, carY + 35, 25, 8);
-  ctx.fillRect(carX + 30, carY + 35, 25, 8);
-
-  ctx.fillStyle = '#111';
-  ctx.fillRect(carX - 70, carY + 10, 12, 30);
-  ctx.fillRect(carX + 58, carY + 10, 12, 30);
+ updateSound();
 }
 
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
+function draw(){
+ ctx.save();
+
+ if(shake>.5){
+  ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);
+  shake*=.85;
+ }
+
+ drawRoad();
+
+ for(const car of cars){
+  drawCar(car.x,car.y,.45+car.p*.7,car.color);
+ }
+
+ const py=H*.80;
+ const px=roadCenter(py)+playerLane*roadHalf(py)*.8;
+ drawCar(px,py,1.12,"#168cff");
+
+ ctx.restore();
+
+ document.getElementById("speed").textContent=Math.round(speed);
+ document.getElementById("score").textContent=Math.floor(score);
 }
 
-loop();
+function loop(time){
+ const dt=Math.min(time-lastTime||16.67,40);
+ lastTime=time;
+ update(dt);
+ draw();
+ requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
