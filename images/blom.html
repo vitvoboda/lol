@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2.5D Retro Racer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background: #050508; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
+    #game-container { position: relative; width: 800px; height: 600px; max-width: 100vw; max-height: 100vh; background: #000; border: 4px solid #00f0ff; box-shadow: 0 0 20px #00f0ff; }
+    canvas { width: 100%; height: 100%; display: block; }
+    .hud { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; pointer-events: none; }
+    .hud-box { background: rgba(0, 0, 0, 0.85); border: 2px solid #00f0ff; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 18px; color: #fff; text-shadow: 0 0 5px #00f0ff; }
+    .hud-box span { font-size: 24px; color: #ff0055; }
+    #overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+    #overlay h1 { font-size: 48px; color: #ff0055; margin-bottom: 20px; text-shadow: 0 0 10px #ff0055; }
+    #overlay p { font-size: 20px; margin-bottom: 25px; }
+    #overlay button { padding: 12px 30px; font-size: 18px; font-weight: bold; background: #00f0ff; color: #000; border: none; border-radius: 5px; cursor: pointer; }
+    .touch-controls { position: absolute; bottom: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; pointer-events: none; }
+    .t-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border: 2px solid #fff; border-radius: 50%; pointer-events: auto; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: white; }
+  </style>
+</head>
+<body>
+
+<div id="game-container">
+  <canvas id="canvas" width="800" height="600"></canvas>
+  
+  <div class="hud">
+    <div class="hud-box">RYCHLOST: <span id="speed">0</span> km/h</div>
+    <div class="hud-box">CHECKPOINTY: <span id="cp">255</span> / 255</div>
+  </div>
+
+  <div id="overlay">
+    <h1 id="ov-title">NÁRAZ DO ZDI!</h1>
+    <p id="ov-msg">Stiskni [R] nebo tlačítko pro restart</p>
+    <button onclick="resetGame()">HRÁT ZNOVU</button>
+  </div>
+
+  <div class="touch-controls">
+    <div style="display:flex; gap:10px;">
+      <div class="t-btn" id="btn-left">◄</div>
+      <div class="t-btn" id="btn-right">►</div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <div class="t-btn" id="btn-brake">▼</div>
+      <div class="t-btn" id="btn-gas">▲</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let speed = 0;
+let playerX = 0; // -1 (vlevo) do 1 (vpravo)
+let pos = 0;
+let remainingCP = 255;
+let isDead = false;
+
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key] = true; if(e.key.toLowerCase()==='r') resetGame(); });
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+// Dotykové ovládání
+const bindTouch = (id, key) => {
+  const el = document.getElementById(id);
+  el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+  el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+};
+bindTouch('btn-left', 'ArrowLeft');
+bindTouch('btn-right', 'ArrowRight');
+bindTouch('btn-gas', 'ArrowUp');
+bindTouch('btn-brake', 'ArrowDown');
+
+function resetGame() {
+  speed = 0;
+  playerX = 0;
+  pos = 0;
+  remainingCP = 255;
+  isDead = false;
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('cp').innerText = remainingCP;
+}
+
+function update() {
+  if (isDead) return;
+
+  // Akcelerace / Brzda
+  if (keys['ArrowUp'] || keys['w'] || keys['W']) speed += 0.8;
+  else if (keys['ArrowDown'] || keys['s'] || keys['S']) speed -= 1.2;
+  else speed *= 0.98;
+
+  speed = Math.max(0, Math.min(speed, 220));
+  pos += speed * 0.15;
+
+  // Zatácení
+  if (speed > 5) {
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) playerX -= 0.035;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) playerX += 0.035;
+  }
+
+  // Zatáčka na trati
+  let curve = Math.sin(pos * 0.005) * 0.025;
+  playerX -= curve * (speed / 100);
+
+  // Detekce nárazu do ZDI (vyjetí ze silnice)
+  if (Math.abs(playerX) > 0.85) {
+    isDead = true;
+    document.getElementById('ov-title').innerText = "NÁRAZ DO ZDI!";
+    document.getElementById('overlay').style.display = 'flex';
+  }
+
+  // Checkpoint detekce (každých 800 metrů)
+  let currentCPIndex = Math.floor(pos / 800);
+  let newRemaining = 255 - currentCPIndex;
+  if (newRemaining < remainingCP && newRemaining >= 0) {
+    remainingCP = newRemaining;
+    document.getElementById('cp').innerText = remainingCP;
+  }
+
+  document.getElementById('speed').innerText = Math.round(speed);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, 800, 600);
+
+  // 1. NEBE & SLUNCE
+  let grad = ctx.createLinearGradient(0, 0, 0, 260);
+  grad.addColorStop(0, '#10002b');
+  grad.addColorStop(1, '#ff0055');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 800, 260);
+
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath();
+  ctx.arc(400, 220, 80, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. POZADÍ ZEMĚ (ČERNÉ)
+  ctx.fillStyle = '#0a0a12';
+  ctx.fillRect(0, 260, 800, 340);
+
+  // 3. VYKRESLENÍ SILNICE & ZDÍ (Perspektiva od horizontu k hráči)
+  const horizonY = 260;
+  const lines = 120;
+
+  for (let i = lines; i > 0; i--) {
+    let p1 = i / lines;
+    let p2 = (i - 1) / lines;
+
+    // Přepočet výšky a šířky pro perspektivu
+    let y1 = horizonY + Math.pow(p1, 2.5) * 340;
+    let y2 = horizonY + Math.pow(p2, 2.5) * 340;
+
+    let w1 = 40 + Math.pow(p1, 2.5) * 650;
+    let w2 = 40 + Math.pow(p2, 2.5) * 650;
+
+    let curveShift1 = Math.sin((pos + (1-p1)*1000) * 0.005) * (1-p1) * 200;
+    let curveShift2 = Math.sin((pos + (1-p2)*1000) * 0.005) * (1-p2) * 200;
+
+    let x1 = 400 - (playerX * w1) + curveShift1;
+    let x2 = 400 - (playerX * w2) + curveShift2;
+
+    // Je na tomto úseku BÍLÝ CHECKPOINT?
+    let segmentWorldZ = pos + (1 - p1) * 1000;
+    let isCheckpoint = (Math.floor(segmentWorldZ) % 800) < 30;
+
+    // --- A) JASNO MODRÉ ZDI (VLEVO A VPRAVO) ---
+    let wallWidth1 = w1 * 0.18;
+    let wallWidth2 = w2 * 0.18;
+
+    // Levá zdi (Jasně modrá)
+    ctx.fillStyle = (Math.floor(segmentWorldZ / 40) % 2 === 0) ? '#0066ff' : '#00bfff';
+    ctx.beginPath();
+    ctx.moveTo(x1 - w1/2 - wallWidth1, y1);
+    ctx.lineTo(x1 - w1/2, y1);
+    ctx.lineTo(x2 - w2/2, y2);
+    ctx.lineTo(x2 - w2/2 - wallWidth2, y2);
+    ctx.fill();
+
+    // Pravá zdi (Jasně modrá)
+    ctx.beginPath();
+    ctx.moveTo(x1 + w1/2, y1);
+    ctx.lineTo(x1 + w1/2 + wallWidth1, y1);
+    ctx.lineTo(x2 + w2/2 + wallWidth2, y2);
+    ctx.lineTo(x2 + w2/2, y2);
+    ctx.fill();
+
+    // --- B) SILNICE (ŠEDÁ / BÍLÁ PRO CHECKPOINT) ---
+    if (isCheckpoint) {
+      ctx.fillStyle = '#ffffff'; // Tlustý BÍLÝ PRUH checkpointu
+    } else {
+      ctx.fillStyle = (Math.floor(segmentWorldZ / 40) % 2 === 0) ? '#444455' : '#333344';
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(x1 - w1/2, y1);
+    ctx.lineTo(x1 + w1/2, y1);
+    ctx.lineTo(x2 + w2/2, y2);
+    ctx.lineTo(x2 - w2/2, y2);
+    ctx.fill();
+
+    // --- C) BÍLÁ STŘEDOVÁ ČÁRA ---
+    if (!isCheckpoint && (Math.floor(segmentWorldZ / 50) % 2 === 0)) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(x1 - w1*0.015, y1);
+      ctx.lineTo(x1 + w1*0.015, y1);
+      ctx.lineTo(x2 + w2*0.015, y2);
+      ctx.lineTo(x2 - w2*0.015, y2);
+      ctx.fill();
+    }
+  }
+
+  // 4. HRÁČOVO AUTO (ČERVENÉ SPORŤÁK)
+  let carX = 400;
+  let carY = 500;
+
+  // Tělo auta
+  ctx.fillStyle = '#ff0044';
+  ctx.fillRect(carX - 60, carY, 120, 45);
+
+  // Střecha / Sklo
+  ctx.fillStyle = '#00f0ff';
+  ctx.fillRect(carX - 40, carY - 20, 80, 20);
+
+  // Světla
+  ctx.fillStyle = '#ffff00';
+  ctx.fillRect(carX - 55, carY + 35, 25, 8);
+  ctx.fillRect(carX + 30, carY + 35, 25, 8);
+
+  // Kola
+  ctx.fillStyle = '#111';
+  ctx.fillRect(carX - 70, carY + 10, 12, 30);
+  ctx.fillRect(carX + 58, carY + 10, 12, 30);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>

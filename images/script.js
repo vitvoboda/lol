@@ -2,7 +2,7 @@ function zkontroluj() {
  
     const heslo = document.getElementById("heslo").value;
  
-    if (heslo === "12") {
+    if (heslo === "om") {
  
         document.getElementById("obsah").style.display = "block";
  

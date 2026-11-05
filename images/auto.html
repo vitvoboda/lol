@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Autíčko - Závodní trať</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #ui {
+            margin-bottom: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        canvas {
+            border: 4px solid #444;
+            background-color: #333333;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #message-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            height: 40px;
+            margin-top: 10px;
+        }
+
+        #message {
+            font-size: 24px;
+            color: #4CAF50;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            font-weight: bold;
+            background-color: #ff3333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #e60000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div>Rychlost: <span id="speed">0</span> km/h</div>
+        <div>Zbývající checkpointy: <span id="checkpoints-left">10</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    
+    <div id="message-container">
+        <div id="message"></div>
+        <button id="restartBtn" style="display: none;" onclick="restartGame()">Hrát znovu</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Nastavení hry
+        const totalCheckpoints = 10;
+        let checkpoints = [];
+        let score = 0;
+        let gameWon = false;
+
+        // Definice tratě (středová osa zatáček a šířka silnice)
+        // Trať je tvořena body, kolem kterých se vykreslují zdi
+        const trackPath = [
+            {x: 150, y: 500},
+            {x: 150, y: 150},
+            {x: 400, y: 100},
+            {x: 650, y: 150},
+            {x: 650, y: 450},
+            {x: 400, y: 520}
+        ];
+        const trackWidth = 90; // Šířka silnice
+
+        // Objekt auta
+        const car = {
+            x: 150,
+            y: 500,
+            width: 26,
+            height: 44,
+            angle: 0,
+            speed: 0,
+            maxSpeed: 7,
+            acceleration: 0.15,
+            friction: 0.04,
+            turnSpeed: 0.045,
+            color: "#ff3333"
+        };
+
+        // Ovládání kláves
+        const keys = { w: false, a: false, s: false, d: false };
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === 'w' || e.key === 'W') keys.w = true;
+            if (e.key === 'a' || e.key === 'A') keys.a = true;
+            if (e.key === 's' || e.key === 'S') keys.s = true;
+            if (e.key === 'd' || e.key === 'D') keys.d = true;
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.key === 'w' || e.key === 'W') keys.w = false;
+            if (e.key === 'a' || e.key === 'A') keys.a = false;
+            if (e.key === 's' || e.key === 'S') keys.s = false;
+            if (e.key === 'd' || e.key === 'D') keys.d = false;
+        });
+
+        // Generování checkpointů podél tratě
+        function generateCheckpoints() {
+            checkpoints = [];
+            // Vytvoříme checkpointy rovnoměrně rozmístěné mezi body tratě
+            for (let i = 0; i < totalCheckpoints; i++) {
+                const progress = i / totalCheckpoints;
+                const pathIndex = Math.floor(progress * trackPath.length);
+                const nextIndex = (pathIndex + 1) % trackPath.length;
+                const t = (progress * trackPath.length) % 1;
+
+                const p1 = trackPath[pathIndex];
+                const p2 = trackPath[nextIndex];
+
+                checkpoints.push({
+                    x: p1.x + (p2.x - p1.x) * t,
+                    y: p1.y + (p2.y - p1.y) * t,
+                    radius: 15,
+                    passed: false
+                });
+            }
+            checkpoints[0].passed = true; // První je aktivní
+            score = 0;
+        }
+
+        // Restart hry
+        function restartGame() {
+            gameWon = false;
+            car.x = trackPath[0].x;
+            car.y = trackPath[0].y;
+            car.angle = 0;
+            car.speed = 0;
+            car.color = "#ff3333";
+            document.getElementById("message").innerText = "";
+            document.getElementById("restartBtn").style.display = "none";
+            generateCheckpoints();
+        }
+
+        // Pomocná funkce pro vzdálenost bodu od úsečky (pro kolize se zdmi)
+        function distToSegmentSquared(p, v, w) {
+            const l2 = (w.x - v.x) * (w.x - v.x) + (w.y - v.y) * (w.y - v.y);
+            if (l2 === 0) return (p.x - v.x) * (p.x - v.x) + (p.y - v.y) * (p.y - v.y);
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return (p.x - (v.x + t * (w.x - v.x))) * (p.x - (v.x + t * (w.x - v.x))) +
+                   (p.y - (v.y + t * (w.y - v.y))) * (p.y - (v.y + t * (w.y - v.y)));
+        }
+
+        function update() {
+            if (gameWon) return;
+
+            // Pohyb auta
+            if (keys.w) {
+                car.speed += car.acceleration;
+                if (car.speed > car.maxSpeed) car.speed = car.maxSpeed;
+            } else if (keys.s) {
+                car.speed -= car.acceleration;
+                if (car.speed < -car.maxSpeed / 2) car.speed = -car.maxSpeed / 2;
+            } else {
+                if (car.speed > 0) car.speed -= car.friction;
+                if (car.speed < 0) car.speed += car.friction;
+                if (Math.abs(car.speed) < car.friction) car.speed = 0;
+            }
+
+            // Otáčení
+            if (car.speed !== 0) {
+                const direction = car.speed > 0 ? 1 : -1;
+                if (keys.a) car.angle -= car.turnSpeed * direction;
+                if (keys.d) car.angle += car.turnSpeed * direction;
+            }
+
+            // Posun souřadnic
+            car.x += Math.sin(car.angle) * car.speed;
+            car.y -= Math.cos(car.angle) * car.speed;
+
+            // Kolize se zdmi tratě (vnější a vnitřní okraj)
+            for (let i = 0; i < trackPath.length; i++) {
+                const p1 = trackPath[i];
+                const p2 = trackPath[(i + 1) % trackPath.length];
+
+                // Výpočet kolmo na úsečku pro detekci zdí
+                const d2 = distToSegmentSquared(car, p1, p2);
+                const halfRoad = trackWidth / 2;
+                
+                // Pokud je auto moc daleko od středu (venku z tratě) nebo moc blízko středu (vnitřní zeď)
+                // Zde zjednodušeně ohraničíme plátno a vnitřní/vnější obdélník tratě
+            }
+
+            // Jednoduchá detekcja nárazu do okrajů plátna + vnitřní překážky
+            // Vnitřní blok (ostrov uprostřed)
+            const innerWall = { x: 400, y: 310, w: 250, z: 200 };
+            if (car.x > innerWall.x - innerWall.w/2 && car.x < innerWall.x + innerWall.w/2 &&
+                car.y > innerWall.y - innerWall.z/2 && car.y < innerWall.y + innerWall.z/2) {
+                car.speed *= -0.4;
+                // Odhození zpět
+                car.x -= Math.sin(car.angle) * 10;
+                car.y += Math.cos(car.angle) * 10;
+            }
+
+            // Okraje plátna
+            if (car.x < 30 || car.x > canvas.width - 30 || car.y < 30 || car.y > canvas.height - 30) {
+                car.speed *= -0.4;
+                car.x -= Math.sin(car.angle) * 10;
+                car.y += Math.cos(car.angle) * 10;
+            }
+
+            // Kontrola kolizí s checkpointy
+            checkpoints.forEach((cp, index) => {
+                if (!cp.passed && index === score) {
+                    const distX = car.x - cp.x;
+                    const distY = car.y - cp.y;
+                    const distance = Math.sqrt(distX * distX + distY * distY);
+
+                    if (distance < car.width / 2 + cp.radius) {
+                        cp.passed = true;
+                        score++;
+                        car.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                    }
+                }
+            });
+
+            // Aktualizace UI textů
+            document.getElementById("speed").innerText = Math.round(Math.abs(car.speed) * 20);
+            document.getElementById("checkpoints-left").innerText = totalCheckpoints - score;
+
+            if (score >= totalCheckpoints) {
+                gameWon = true;
+                document.getElementById("message").innerText = "Gratulace! Úspěšně jsi projel trať!";
+                document.getElementById("restartBtn").style.display = "block";
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Kreslení silnice (trať)
+            ctx.beginPath();
+            ctx.moveTo(trackPath[0].x, trackPath[0].y);
+            for (let i = 1; i < trackPath.length; i++) {
+                ctx.lineTo(trackPath[i].x, trackPath[i].y);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = "#444444";
+            ctx.lineWidth = trackWidth;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.stroke();
+
+            // Kreslení okrajů silnice (zdi)
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Vnitřní ostrov (zeď uvnitř okruhu)
+            ctx.fillStyle = "#1a1a1a";
+            ctx.beginPath();
+            ctx.roundRect(275, 210, 250, 200, 20);
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Kreslení checkpointů
+            checkpoints.forEach((cp, index) => {
+                if (index === score) {
+                    ctx.beginPath();
+                    ctx.arc(cp.x, cp.y, cp.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = "#00ffff";
+                    ctx.fill();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = "#ffffff";
+                    ctx.stroke();
+                    ctx.closePath();
+                }
+            });
+
+            // Kreslení auta
+            ctx.save();
+            ctx.translate(car.x, car.y);
+            ctx.rotate(car.angle);
+
+            // Tělo auta
+            ctx.fillStyle = car.color;
+            ctx.fillRect(-car.width / 2, -car.height / 2, car.width, car.height);
+
+            // Přední okno
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(-car.width / 2 + 3, -car.height / 2 + 4, car.width - 6, 9);
+
+            // Kola
+            ctx.fillStyle = "#111";
+            ctx.fillRect(-car.width / 2 - 3, -car.height / 2 + 6, 3, 8);
+            ctx.fillRect(car.width / 2, -car.height / 2 + 6, 3, 8);
+            ctx.fillRect(-car.width / 2 - 3, car.height / 2 - 14, 3, 8);
+            ctx.fillRect(car.width / 2, car.height / 2 - 14, 3, 8);
+
+            ctx.restore();
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Spuštění hry
+        generateCheckpoints();
+        loop();
+    </script>
+</body>
+</html>
