@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obraceč slov</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #101827, #263d65);
+        color: white;
+    }
+
+    .container {
+        background: #1e293b;
+        padding: 35px;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 450px;
+        text-align: center;
+        box-shadow: 0 10px 40px #0008;
+    }
+
+    h1 {
+        color: #38bdf8;
+        margin-top: 0;
+    }
+
+    input {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #38bdf8;
+        border-radius: 10px;
+        background: #0f172a;
+        color: white;
+        font-size: 18px;
+        outline: none;
+    }
+
+    button {
+        width: 100%;
+        margin-top: 15px;
+        padding: 15px;
+        border: none;
+        border-radius: 10px;
+        background: #0ea5e9;
+        color: white;
+        font-size: 17px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        background: #0284c7;
+        transform: scale(1.03);
+    }
+
+    .vysledek {
+        margin-top: 25px;
+        padding: 20px;
+        background: #0f172a;
+        border-radius: 12px;
+        min-height: 85px;
+    }
+
+    .vysledek p {
+        color: #94a3b8;
+        margin: 0 0 10px;
+    }
+
+    #vysledek {
+        color: #4ade80;
+        font-size: 27px;
+        font-weight: bold;
+        overflow-wrap: anywhere;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🔄 Obraceč slov</h1>
+
+    <p>Napiš slovo a já ho obrátím!</p>
+
+    <input
+        type="text"
+        id="slovo"
+        placeholder="Napiš nějaké slovo..."
+    >
+
+    <button onclick="obratitSlovo()">
+        OBRÁTIT SLOVO
+    </button>
+
+    <div class="vysledek">
+        <p>Výsledek:</p>
+        <div id="vysledek">Tady se objeví slovo</div>
+    </div>
+
+</div>
+
+<script>
+    function obratitSlovo() {
+        const vstup = document.getElementById("slovo").value;
+
+        if (vstup.trim() === "") {
+            document.getElementById("vysledek").textContent =
+                "Nejdřív napiš slovo!";
+            return;
+        }
+
+        const obracene = Array.from(vstup).reverse().join("");
+
+        document.getElementById("vysledek").textContent = obracene;
+    }
+
+    document.getElementById("slovo").addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            obratitSlovo();
+        }
+    });
+</script>
+
+</body>
+</html>

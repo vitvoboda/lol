@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Calculator</title>
+	<style>
+		* { box-sizing: border-box; }
+		body {
+			min-height: 100vh;
+			margin: 0;
+			display: grid;
+			place-items: center;
+			background: #eef2f7;
+			color: #172033;
+			font: 16px/1.4 system-ui, sans-serif;
+		}
+		.calculator {
+			width: min(340px, calc(100vw - 32px));
+			padding: 20px;
+			border-radius: 20px;
+			background: #f8f2f2;
+			box-shadow: 0 16px 40px #1720331a;
+		}
+		h1 { margin: 0 0 14px; font-size: 1.2rem; }
+		#display {
+			width: 100%;
+			height: 72px;
+			margin-bottom: 14px;
+			padding: 12px;
+			border: 0;
+			border-radius: 12px;
+			background: #f3f5f9;
+			color: inherit;
+			font: 2rem/1.2 ui-monospace, monospace;
+			text-align: right;
+		}
+		.keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+		button {
+			min-height: 56px;
+			border: 0;
+			border-radius: 12px;
+			background: #edf0f5;
+			color: inherit;
+			font: 600 1.1rem system-ui, sans-serif;
+			cursor: pointer;
+		}
+		button:hover { filter: brightness(.96); }
+		button:focus-visible { outline: 3px solid #6688ff; outline-offset: 2px; }
+		.operator { background: #e3eaff; color: #3158d4; }
+		.clear { background: #ffe8e8; color: #b42323; }
+		.equals { grid-column: span 2; background: #3158d4; color: #fff; }
+	</style>
+</head>
+<body>
+	<main class="calculator" aria-label="Calculator">
+		<h1>Calculator</h1>
+		<input id="display" type="text" value="0" aria-label="Display" readonly>
+		<div class="keys">
+			<button class="clear" data-action="clear">AC</button>
+			<button class="operator" data-action="sign" aria-label="Change sign">+/−</button>
+			<button class="operator" data-action="percent">%</button>
+			<button class="operator" data-op="÷">÷</button>
+			<button data-digit="7">7</button><button data-digit="8">8</button><button data-digit="9">9</button>
+			<button class="operator" data-op="×">×</button>
+			<button data-digit="4">4</button><button data-digit="5">5</button><button data-digit="6">6</button>
+			<button class="operator" data-op="−">−</button>
+			<button data-digit="1">1</button><button data-digit="2">2</button><button data-digit="3">3</button>
+			<button class="operator" data-op="+">+</button>
+			<button data-action="decimal">.</button><button data-digit="0">0</button>
+			<button class="equals" data-action="equals">=</button>
+		</div>
+	</main>
+	<script>
+		const display = document.querySelector('#display');
+		let current = '0';
+		let stored = null;
+		let operation = null;
+		let replaceCurrent = false;
+
+		function show(value) {
+			current = String(value);
+			display.value = current;
+		}
+
+		function calculate() {
+			if (stored === null || operation === null) return;
+			const a = Number(stored);
+			const b = Number(current);
+			let result;
+			if (operation === '+') result = a + b;
+			if (operation === '−') result = a - b;
+			if (operation === '×') result = a * b;
+			if (operation === '÷') result = b === 0 ? NaN : a / b;
+			show(Number.isFinite(result) ? Number(result.toPrecision(10)) : 'Error');
+			stored = null;
+			operation = null;
+			replaceCurrent = true;
+		}
+
+		document.querySelector('.keys').addEventListener('click', event => {
+			const button = event.target.closest('button');
+			if (!button) return;
+
+			if (button.dataset.digit !== undefined) {
+				const digit = button.dataset.digit;
+				show(replaceCurrent || current === '0' || current === 'Error' ? digit : current + digit);
+				replaceCurrent = false;
+				return;
+			}
+
+			const action = button.dataset.action;
+			if (action === 'clear') {
+				stored = operation = null;
+				replaceCurrent = false;
+				show('0');
+			} else if (action === 'decimal') {
+				if (replaceCurrent || current === 'Error') show('0.');
+				else if (!current.includes('.')) show(current + '.');
+				replaceCurrent = false;
+			} else if (action === 'sign' && current !== 'Error') {
+				show(String(Number(current) * -1));
+			} else if (action === 'percent' && current !== 'Error') {
+				show(String(Number(current) / 100));
+			} else if (action === 'equals') {
+				calculate();
+			} else if (button.dataset.op) {
+				if (current === 'Error') return;
+				if (stored !== null && !replaceCurrent) calculate();
+				stored = current;
+				operation = button.dataset.op;
+				replaceCurrent = true;
+			}
+		});
+	</script>
+</body>
+</html>
