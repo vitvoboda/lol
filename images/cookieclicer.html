@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale5.0">
+    <title>Moje Cookie Clicker Hra</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            margin-top: 50px;
+        }
+        #cookie {
+            font-size: 100px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s;
+            display: inline-block;
+        }
+        #cookie:active {
+            transform: scale(0.9);
+        }
+        .btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🍪 Moje Cookie Clicker Hra 🍪</h1>
+    <h2 id="score">Počet sušenek: 0</h2>
+    
+    <div id="cookie" onclick="clickCookie()">🍪</div>
+    
+    <br>
+    <div>
+        <button class="btn" onclick="buyCursor()">Koupit kurzor (Cena: <span id="cursorCost">15</span>) - <span id="cursorCount">0</span>x</button>
+    </div>
+
+    <script>
+        let score = 0;
+        let clickPower = 1;
+        let cursorCost = 15;
+        let cursors = 0;
+        let cps = 0; // Cookies per second
+
+        function clickCookie() {
+            score += clickPower;
+            updateScore();
+        }
+
+        function buyCursor() {
+            if (score >= cursorCost) {
+                score -= cursorCost;
+                cursors++;
+                cps += 1;
+                cursorCost = Math.floor(cursorCost * 1.15); // Zvýšení ceny
+                updateScore();
+                document.getElementById('cursorCost').innerText = cursorCost;
+                document.getElementById('cursorCount').innerText = cursors;
+            } else {
+                alert("Nemáš dost sušenek!");
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').innerText = "Počet sušenek: " + Math.floor(score);
+        }
+
+        // Automatické přičítání sušenek každou sekundu
+        setInterval(function() {
+            score += cps;
+            updateScore();
+        }, 1000);
+    </script>
+
+</body>
+</html>
